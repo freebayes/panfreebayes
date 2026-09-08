@@ -1,0 +1,5 @@
+bam_md5=6d8e38863c8a8d75b21b0ce973c8d308
+made=2026-09-08 freebayes=v1.3.10 calls=4102
+@PG	ID:minimap2	PN:minimap2	VN:2.28-r1209	CL:minimap2 -ax map-pb -t 16 regions/chrII/DL238_1_chrII_JAFETN010000011.1_1664999-1748589.fasta fastq/DL238_SRR13448210.fastq
+@PG	ID:samtools	PN:samtools	PP:minimap2	VN:1.19	CL:samtools sort -@ 16 -o align/chrII/DL238_DL238_1_chrII_JAFETN010000011.1_1664999-1748589.bam
+@PG	ID:samtools.1	PN:samtools	PP:samtools	VN:1.19	CL:samtools view -H /home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/align/chrII/DL238_DL238_1_chrII_JAFETN010000011.1_1664999-1748589.bam
