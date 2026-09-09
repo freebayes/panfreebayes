@@ -3876,9 +3876,17 @@ vector<Allele> AlleleParser::genotypeAlleles(
         }
         if (qSum >= parameters.minSupportingAlleleQualitySum && mqSum >= parameters.minSupportingMappingQualitySum) {
             Allele& allele = *(alleles.front());
-            int length = allele.length;
-            int reflength = allele.referenceLength;
             string altseq = allele.alternateSequence;
+            // Derive `length` from (type, altseq, cigar) instead of trusting
+            // allele.length. Observations of the same alt sequence can carry an
+            // inconsistent (stale) `length` member, and which one is
+            // alleles.front() depends on the pointer-address sort of
+            // registeredAlleles (this fn's callers sort by std::less<Allele*>).
+            // Taking allele.length verbatim therefore made the emitted VCF LEN
+            // depend on heap layout -- reproducibly different between binaries.
+            // This mirrors Allele::updateTypeAndLengthFromCigar().  [panfreebayes]
+            int length = alleleLengthFromCigar(allele.type, altseq, allele.cigar);
+            int reflength = allele.referenceLength;
             if (allele.type == ALLELE_REFERENCE) {
                 length = haplotypeLength;
                 reflength = haplotypeLength;

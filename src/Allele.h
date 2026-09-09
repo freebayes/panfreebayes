@@ -390,6 +390,7 @@ bool isEmptyAlleleOrIsDividedIndel(const Allele& allele);
 bool isUnflankedIndel(const Allele& allele);
 
 int referenceLengthFromCigar(string& cigar);
+int alleleLengthFromCigar(AlleleType type, const string& altseq, const string& cigar);
 
 //AlleleFreeList Allele::_freeList;
 

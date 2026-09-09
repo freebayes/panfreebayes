@@ -1430,6 +1430,32 @@ int referenceLengthFromCigar(string& cigar) {
     return r;
 }
 
+// The event length that Allele::updateTypeAndLengthFromCigar() would assign,
+// computed purely from (type, altseq, cigar) -- i.e. independent of any
+// Allele object's possibly-stale `length` member. See AlleleParser::genotypeAlleles.
+int alleleLengthFromCigar(AlleleType type, const string& altseq, const string& cigar) {
+    switch (type) {
+    case ALLELE_REFERENCE:
+    case ALLELE_COMPLEX:
+    case ALLELE_NULL:
+        return altseq.size();
+    default:
+        break;
+    }
+    map<char, int> cigarLengths;
+    vector<pair<int, string> > cigarV = splitCigar(cigar);
+    for (vector<pair<int, string> >::iterator c = cigarV.begin(); c != cigarV.end(); ++c) {
+        cigarLengths[c->second[0]] += c->first;
+    }
+    switch (type) {
+    case ALLELE_SNP:
+    case ALLELE_MNP:       return cigarLengths['X'];
+    case ALLELE_INSERTION: return cigarLengths['I'];
+    case ALLELE_DELETION:  return cigarLengths['D'];
+    default:               return altseq.size();
+    }
+}
+
 int Allele::referenceLengthFromCigar(void) {
     int r = 0;
     vector<pair<int, string> > cigarV = splitCigar(cigar);
