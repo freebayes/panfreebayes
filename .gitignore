@@ -17,3 +17,8 @@ CMakeCache.txt
 *.rej
 seqlib-prefix/
 vcflib-prefix/
+*.panfreebayes.vcf
+*.diff
+*_check.log
+*_regression.log
+regen_*.log
