@@ -46,7 +46,7 @@ run_case() {
 
   "$FB" -f "$REF" "$@" "$bam" | strip > "$work/$tag.fb.vcf"
 
-  if ! $TIME "$PFB" --ref "$REF" --bam "$bam" "$@" 2> "$work/$tag.err" \
+  if ! $TIME "$PFB" call --ref "$REF" --bam "$bam" "$@" 2> "$work/$tag.err" \
         | strip > "$work/$tag.pfb.vcf"; then
     echo "  panfreebayes FAILED"; sed -n '1,40p' "$work/$tag.err"; FAIL=1; return
   fi
@@ -77,7 +77,7 @@ run_case spike        "$work/spike.bam" "${ACC_ARGS[@]}"
 run_case spike_nolimit "$work/spike.bam" --pooled-continuous --min-alternate-count 2 --min-alternate-fraction 0.2
 
 echo "=== case: region_flag_rejected ==="
-if "$PFB" --ref "$REF" --bam "$work/flat.bam" -- -r foo:1-2 \
+if "$PFB" call --ref "$REF" --bam "$work/flat.bam" -- -r foo:1-2 \
       > "$work/region.out" 2> "$work/region.err"; then
   echo "  FAILED: panfreebayes accepted -r instead of rejecting it"; FAIL=1
 else

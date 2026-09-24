@@ -1,7 +1,30 @@
 # panFreebayes test harness
 
-Two scripts, both meant to run **inside the guix build environment** (so the
-built binaries find their shared libraries):
+## The CLI (Milestone 3)
+
+```
+panfreebayes call --ref <ref.fasta> --bam <aln.bam> [flags] > out.vcf
+panfreebayes version
+panfreebayes help
+```
+
+`call` analyses the **whole** reference/BAM as one region (no `-r`/`-t`). Flags:
+`--pooled-continuous`, `--min-alternate-count N`, `--min-alternate-fraction X`,
+`--limit-coverage N`; `-- <args>` passes extra tokens to the engine verbatim
+(region/target/stdin flags are rejected). Output is bit-for-bit identical to
+stock single-process `freebayes` with the equivalent arguments.
+
+Pre-flight checks before calling: `--ref`/`--bam` readable; BAM opens and has a
+header; BAM is `SO:coordinate`; at least one BAM `@SQ` name is present in the
+FASTA (else "BAM and reference do not match"). Exit codes: `0` ok, `1` bad
+command, `2` bad arguments / failed pre-flight.
+
+---
+
+## Test scripts
+
+Both meant to run **inside the guix build environment** (so the built binaries
+find their shared libraries):
 
 ```sh
 guix shell --pure bash grep gzip coreutils diffutils gcc-toolchain \
@@ -87,9 +110,12 @@ entirely, passed verbatim to both tools.
 
 ## Status
 
-- [x] panfreebayes ≡ stock freebayes, byte-identical, on synthetic data
-- [x] panfreebayes ≡ stock freebayes, byte-identical, on the real DL238 bubble
-      (4,102 calls, 2026-09-08)
-- [ ] baseline VCF committed under `baselines/` + provenance
-- [ ] MY2693 bubble checked the same way
+- [x] `panfreebayes` ≡ stock `freebayes`, byte-identical, on synthetic data (smoke test)
+- [x] `panfreebayes` ≡ stock `freebayes`, byte-identical, on the real DL238 bubble
+      (4,102 calls, 2026-09-08) — baseline committed under `baselines/`
+- [x] M3 CLI (`panfreebayes call`) + pre-flight checks; smoke test runs through it
+- [ ] MY2693 bubble baseline + regression (run in progress)
+- [ ] DL238 regression re-run *through `panfreebayes call`* (belt-and-suspenders;
+      the smoke test already exercises `call`, and identical `Options` → identical
+      engine invocation, so this only re-confirms the arg parsing)
 - [ ] second validation region (`…JAFETN010000040.1:497444-552651`) checked

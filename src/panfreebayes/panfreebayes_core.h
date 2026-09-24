@@ -58,9 +58,12 @@ std::vector<std::string> buildArgv(const Options& opt);
 int callVariants(const Options& opt, std::ostream& out);
 
 // argv-level entry point. `argv` is a full freebayes command line with
-// argv[0] == "freebayes" (or anything). This is what the throwaway CLI uses,
-// and is the single place the src/freebayes.cpp main-loop body is reproduced.
+// argv[0] == "freebayes" (or anything). This is what the CLI uses, and is the
+// single place the src/freebayes.cpp main-loop body is reproduced.
 int callVariantsArgv(const std::vector<std::string>& argv, std::ostream& out);
+
+// Version string for the CLI / logging (single source of truth).
+std::string version();
 
 } // namespace panfreebayes
 

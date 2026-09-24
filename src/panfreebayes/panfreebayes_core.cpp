@@ -45,11 +45,16 @@
 #include "Contamination.h"
 #include "NonCall.h"
 #include "Logging.h"
+#include "version_git.h"
 #include <vcflib/Variant.h>
 
 using namespace std;
 
 namespace panfreebayes {
+
+std::string version() {
+    return std::string("panfreebayes (freebayes engine ") + VERSION_GIT + ")";
+}
 
 // ---------------------------------------------------------------------------
 // Milestone 1, "Step 2" (decision 2).

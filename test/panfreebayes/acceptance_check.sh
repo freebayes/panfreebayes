@@ -96,7 +96,7 @@ echo "args:  ${EXTRA[*]}"
 echo
 
 echo "running panfreebayes ..."
-time "$PFB" --ref "$REF" --bam "$BAM" "${EXTRA[@]}" > "$pfb_vcf"
+time "$PFB" call --ref "$REF" --bam "$BAM" "${EXTRA[@]}" > "$pfb_vcf"
 echo "  panfreebayes calls: $(grep -vc '^#' "$pfb_vcf" || true)"
 echo
 
