@@ -1,2 +1,0 @@
-placeholder odgi graph -- fake odgi ignores this file's content, it only
-needs to exist so Snakemake resolves the `graph` input path.
