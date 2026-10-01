@@ -1,0 +1,32 @@
+# Config for the Snakemake wiring test (dryrun_test.sh) -- synthetic fixtures
+# and fake tool stand-ins only. NOT the production config; see
+# config/config.yaml for that.
+#
+# min_size_diff is deliberately small (20, not the production default of 500)
+# so the tiny synthetic deconstruct.vcf fixture actually produces bubbles to
+# fan out over.
+
+graph: "test/panfreebayes/snakemake/fixtures/graph.og"
+deconstruct_vcf: "test/panfreebayes/snakemake/fixtures/deconstruct.vcf"
+
+strains:
+  DL238:  "test/panfreebayes/snakemake/fixtures/DL238.fastq"
+  MY2693: "test/panfreebayes/snakemake/fixtures/MY2693.fastq"
+
+min_size_diff: 20
+bubble_limit:
+
+padding: 100
+minimap2_threads: 1
+
+panfreebayes_bin: "test/panfreebayes/snakemake/fakebin/panfreebayes"
+calling_flags:
+  - "--pooled-continuous"
+  - "--min-alternate-count"
+  - "2"
+  - "--min-alternate-fraction"
+  - "0.2"
+  - "--limit-coverage"
+  - "200"
+
+results_dir: "results"   # overridden by dryrun_test.sh via --config results_dir=<tmp dir>

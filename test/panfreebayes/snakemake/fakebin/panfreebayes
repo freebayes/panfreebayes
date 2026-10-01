@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#
+# Fake panfreebayes -- logs its invocation, rejects -r/-t/-c/-L just like the
+# real CLI does (so a command-construction bug that leaked a forbidden flag
+# into call_variants would be caught here too), and emits a minimal valid
+# VCF so the workflow's `all` target can complete without a real build,
+# reference, or BAM.
+#
+set -euo pipefail
+: "${FAKE_LOG:?FAKE_LOG must be set}"
+echo "panfreebayes $*" >> "$FAKE_LOG"
+
+if [ "${1:-}" != "call" ]; then
+  echo "fake panfreebayes: unhandled subcommand: ${1:-}" >&2
+  exit 2
+fi
+shift
+
+for a in "$@"; do
+  case "$a" in
+    -r|--region|-t|--targets|-c|--stdin|-L|--bam-list)
+      echo "fake panfreebayes: '$a' should never reach here -- panfreebayes always analyses its entire input as one region" >&2
+      exit 1
+      ;;
+  esac
+done
+
+cat <<'EOF'
+##fileformat=VCFv4.2
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+EOF

@@ -1,0 +1,68 @@
+#
+# panfreebayes Snakemake workflow
+# ================================
+#
+# Orchestrates the full bubble-region calling pipeline as a DAG:
+#
+#   vg-deconstruct VCF -> [discover_bubbles] -> bubbles.tsv
+#     bubbles.tsv x graph  -> [extract_region] -> <bubble>.{og,fasta}   (per bubble)
+#     <bubble>.fasta x fastq -> [align_region]  -> <strain>/<bubble>.bam (per strain x bubble)
+#     <bubble>.fasta + .bam -> [call_variants]  -> <strain>/<bubble>.vcf (per strain x bubble)
+#
+# FIRST VERSION, NOT FINAL -- see panfreebayes_milestone6_snakemake_progress.md
+# for what's confirmed-from-instruction vs. this workflow's own design choice,
+# and what's validated (fake-stub dry run) vs. not (real odgi/minimap2/vg and
+# real biological data -- that must happen on vesuvio).
+#
+# This is the PRIMARY way to run the multi-strain / multi-bubble batch
+# pipeline going forward. scripts/panfreebayes/pipeline.sh remains available,
+# unmodified, as the simpler manual single-region tool -- neither supersedes
+# the other on disk, this one is just the intended default for real batch runs.
+#
+# Every command in workflow/rules/*.smk is a verbatim transplant of the
+# already-validated commands in scripts/panfreebayes/*.sh (same awk program,
+# same odgi/minimap2/samtools invocations, same output-naming convention, same
+# four calling flags) -- nothing here re-derives a parameter or a command
+# shape. The only new logic is the Snakemake wiring itself (see rules/common.smk
+# and rules/discover_bubbles.smk for the checkpoint-based dynamic fan-out).
+#
+# Usage:
+#   snakemake --cores N --configfile config/config.yaml all
+#   snakemake -n --configfile config/config.yaml all   # dry run
+#
+configfile: "config/config.yaml"
+
+RESULTS = config.get("results_dir", "results")
+
+# Minimal, dependency-free required-key check. No config.schema.yaml/validate()
+# in this first version -- deliberately kept simple; see the progress doc.
+_REQUIRED = ["graph", "deconstruct_vcf", "strains", "panfreebayes_bin", "calling_flags"]
+_missing = [k for k in _REQUIRED if k not in config or config[k] in (None, "")]
+if _missing:
+    raise SystemExit(
+        "config.yaml is missing required key(s): " + ", ".join(_missing)
+    )
+
+# Explicit, not implicit: a minimap2 failure must fail align_region even
+# though it's the left side of a pipe into samtools sort -- mirrors
+# align_region.sh's own `set -o pipefail` and the comment explaining why.
+shell.prefix("set -euo pipefail; ")
+
+wildcard_constraints:
+    strain=r"[^/]+",
+    bubble=r"[^/]+",
+
+include: "rules/common.smk"
+include: "rules/discover_bubbles.smk"
+include: "rules/extract_region.smk"
+include: "rules/align_region.smk"
+include: "rules/call_variants.smk"
+
+
+rule all:
+    input:
+        lambda wc: expand(
+            f"{RESULTS}/calls/{{strain}}/{{bubble}}.vcf",
+            strain=list(config["strains"].keys()),
+            bubble=all_bubble_ids(wc),
+        ),

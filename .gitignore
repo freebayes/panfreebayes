@@ -22,3 +22,5 @@ vcflib-prefix/
 *_check.log
 *_regression.log
 regen_*.log
+.snakemake/
+results/
