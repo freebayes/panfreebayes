@@ -14,14 +14,18 @@
 # and what's validated (fake-stub dry run) vs. not (real odgi/minimap2/vg and
 # real biological data -- that must happen on vesuvio).
 #
-# This is the PRIMARY way to run the multi-strain / multi-bubble batch
-# pipeline going forward. scripts/panfreebayes/pipeline.sh remains available,
-# unmodified, as the simpler manual single-region tool -- neither supersedes
-# the other on disk, this one is just the intended default for real batch runs.
+# This is now the ONLY way to run the pipeline -- the bash equivalents
+# (scripts/panfreebayes/{discover_bubbles,extract_region,align_region,
+# pipeline}.sh) that this was originally built to match have been removed;
+# see panfreebayes_milestone6_snakemake_progress.md for why (duplicated
+# logic to maintain in two places, once this workflow covered the same
+# ground) and for the one capability tradeoff that removal accepts: a region
+# can no longer be extracted/called ad hoc without it first appearing as a
+# row in a real discover_bubbles scan over a vg-deconstruct VCF.
 #
-# Every command in workflow/rules/*.smk is a verbatim transplant of the
-# already-validated commands in scripts/panfreebayes/*.sh (same awk program,
-# same odgi/minimap2/samtools invocations, same output-naming convention, same
+# Every command in workflow/rules/*.smk is a verbatim transplant of what
+# those now-removed scripts used to run (same awk program, same
+# odgi/minimap2/samtools invocations, same output-naming convention, same
 # four calling flags) -- nothing here re-derives a parameter or a command
 # shape. The only new logic is the Snakemake wiring itself (see rules/common.smk
 # and rules/discover_bubbles.smk for the checkpoint-based dynamic fan-out).

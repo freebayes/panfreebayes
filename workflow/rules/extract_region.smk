@@ -1,19 +1,18 @@
 #
 # Stage 2 -- region extraction (per bubble).
 #
-# Verbatim transplant of scripts/panfreebayes/extract_region.sh's own two
-# commands and output-basename convention:
+# Matches the manual pipeline's own extraction step exactly:
 #
 #   odgi extract -i <graph.og> -r "<path>:<start>-<end>" -c <padding> -o <bubble>.og
 #   odgi paths -i <bubble>.og -f > <bubble>.fasta
 #
-# {wildcards.bubble} is exactly the basename extract_region.sh already
-# produces (see common.smk's _bubble_id): the PanSN path with every '#'
-# replaced by '_', plus "_<start>-<end>". params.path/start/end are looked up
-# from the discover_bubbles checkpoint's TSV via bubble_row() (common.smk).
+# {wildcards.bubble} is exactly the output-basename convention that step used
+# (see common.smk's _bubble_id): the PanSN path with every '#' replaced by
+# '_', plus "_<start>-<end>". params.path/start/end are looked up from the
+# discover_bubbles checkpoint's TSV via bubble_row() (common.smk).
 #
 # --graph must already be odgi-native (.og); no .gfa->.og conversion is done
-# here, matching extract_region.sh exactly.
+# here.
 #
 rule extract_region:
     input:

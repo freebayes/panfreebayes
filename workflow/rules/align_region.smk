@@ -1,20 +1,19 @@
 #
 # Stage 3 -- alignment (per strain x bubble).
 #
-# Verbatim transplant of scripts/panfreebayes/align_region.sh's own commands:
+# Matches the manual pipeline's own alignment step exactly:
 #
 #   minimap2 -ax map-pb -t <threads> <ref.fasta> <fastq> | samtools sort -o <bam>
 #   samtools index <bam>
 #
-# No flags beyond what's shown are added, matching align_region.sh exactly
-# (confirmed by the supervisor that none else were used -- in particular,
-# `samtools sort` gets no -@).
+# No flags beyond what's shown are added (confirmed by the supervisor that
+# none else were used -- in particular, `samtools sort` gets no -@).
 #
 # `threads:` is sourced from config["minimap2_threads"] and Snakemake's own
-# --cores-aware scheduling, rather than align_region.sh's `nproc`-or-4
-# fallback -- this workflow's own choice (Snakemake already owns the thread
-# budget across concurrently-running rule instances, so re-deriving nproc per
-# rule invocation would just fight that).
+# --cores-aware scheduling, rather than re-deriving `nproc` per invocation --
+# this workflow's own choice (Snakemake already owns the thread budget across
+# concurrently-running rule instances, so a per-rule nproc call would just
+# fight that).
 #
 # shell.prefix("set -euo pipefail; ") in the Snakefile makes a minimap2
 # failure fail this rule even though it's the left side of a pipe into

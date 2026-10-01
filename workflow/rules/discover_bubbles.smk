@@ -11,18 +11,17 @@
 # common.smk's bubble_row()/all_bubble_ids(), which call
 # checkpoints.discover_bubbles.get() to do exactly that.
 #
-# The awk program below is a verbatim transplant of
-# scripts/panfreebayes/discover_bubbles.sh's own awk program: same metric
-# (|REF_len - ALT_len|), same strict `>` threshold (default 500, confirmed
-# manual-pipeline value -- not a guess), same multi-allelic handling (pick
-# the ALT with the largest size difference from REF; skip symbolic ALTs like
-# <INS> rather than guess their length -- itself flagged in that script as
-# this implementation's own design choice, untested against real
-# multi-allelic data), same descending sort by size-diff, same optional
-# --limit/head -n cap.
+# The awk program below is a verbatim transplant of the manual pipeline's own
+# awk filter: same metric (|REF_len - ALT_len|), same strict `>` threshold
+# (default 500, confirmed manual-pipeline value -- not a guess), same
+# multi-allelic handling (pick the ALT with the largest size difference from
+# REF; skip symbolic ALTs like <INS> rather than guess their length -- this
+# implementation's own design choice, untested against real multi-allelic
+# data -- see panfreebayes_milestone4_5_progress.md), same descending sort by
+# size-diff, same optional --limit/head -n cap.
 #
-# GOTCHA specific to Snakemake's `shell:` (not present in the bash version):
-# `shell:` strings go through Python's .format()-style substitution for
+# GOTCHA specific to Snakemake's `shell:` (not present in a plain bash
+# script): `shell:` strings go through Python's .format()-style substitution for
 # {input}/{output}/{params}/{wildcards}, so every literal awk `{`/`}` below
 # is doubled to `{{`/`}}`. Bash's own single-quoted awk needed no such
 # escaping.

@@ -1,7 +1,7 @@
 #
 # Stage 4 -- variant calling (per strain x bubble).
 #
-# Matches scripts/panfreebayes/pipeline.sh's final `exec` line exactly:
+# Invokes the compiled panfreebayes CLI exactly as the manual pipeline did:
 #
 #   <panfreebayes_bin> call --ref <fasta> --bam <bam> -- <calling_flags...>
 #
@@ -11,10 +11,10 @@
 # --min-alternate-fraction 0.2 --limit-coverage 200), the exact flags
 # test/panfreebayes/baselines/ were produced with.
 #
-# panfreebayes_bin is assumed pre-built (config-provided path, exactly like
-# pipeline.sh's --panfreebayes override) -- this workflow does not add a rule
-# that builds it via ninja; see panfreebayes_milestone6_snakemake_progress.md
-# for why (this workflow's own choice, not instructed).
+# panfreebayes_bin is assumed pre-built (config-provided path) -- this
+# workflow does not add a rule that builds it via ninja; see
+# panfreebayes_milestone6_snakemake_progress.md for why (this workflow's own
+# choice, not instructed).
 #
 # Note calling_flags is a YAML list, not a single string, specifically to
 # avoid a second layer of shell-quoting/splitting ambiguity when Snakemake's
