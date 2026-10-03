@@ -109,8 +109,14 @@ EOF
 cd "$root"
 
 echo "=== [1/3] discovering bubbles (real deconstruct VCF) ==="
-snakemake --cores 1 --snakefile workflow/Snakefile --configfile "$cfg" \
-  "$RESULTS_DIR/bubbles/bubbles.tsv"
+# Target(s) given BEFORE --configfile deliberately: Snakemake 8.x made
+# --configfile nargs='+' (to support layering multiple config files), so it
+# now greedily swallows whatever token follows it on the command line -- if
+# the target path came after --configfile here, Snakemake would try to
+# open() the (not-yet-created) target as a second config file and fail with
+# a confusing FileNotFoundError, instead of treating it as a build target.
+snakemake "$RESULTS_DIR/bubbles/bubbles.tsv" \
+  --cores 1 --snakefile workflow/Snakefile --configfile "$cfg"
 
 tsv="$RESULTS_DIR/bubbles/bubbles.tsv"
 [ -f "$tsv" ] || { echo "discover_bubbles did not produce $tsv" >&2; exit 1; }
@@ -153,8 +159,9 @@ fi
 
 echo
 echo "=== [3/3] extracting, aligning, calling for $bubble (DL238, MY2693) ==="
-snakemake --cores "${SNAKEMAKE_CORES:-4}" --snakefile workflow/Snakefile --configfile "$cfg" \
-  "$RESULTS_DIR/calls/DL238/$bubble.vcf" "$RESULTS_DIR/calls/MY2693/$bubble.vcf"
+# Same Snakemake 8.x --configfile-is-greedy ordering fix as above.
+snakemake "$RESULTS_DIR/calls/DL238/$bubble.vcf" "$RESULTS_DIR/calls/MY2693/$bubble.vcf" \
+  --cores "${SNAKEMAKE_CORES:-4}" --snakefile workflow/Snakefile --configfile "$cfg"
 
 body() { grep -v '^##' "$1"; }
 read_baseline() { gzip -dc "$1"; }
