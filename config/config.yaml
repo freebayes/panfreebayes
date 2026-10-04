@@ -28,6 +28,8 @@ minimap2_threads: 4   # minimap2 -t; samtools sort gets no -@, matching align_re
 
 # --- Stage 4: variant calling ----------------------------------------------
 panfreebayes_bin: "build/panfreebayes"   # pre-built path; the workflow does not build it (see progress doc)
+freebayes_bin: "build/freebayes"          # stock freebayes, built alongside panfreebayes by the same `ninja -C build`;
+                                           # only used by the optional call_variants_freebayes equivalence rule, not `rule all`
 calling_flags:                            # forwarded verbatim after "--"; list form avoids shell-quoting ambiguity
   - "--pooled-continuous"
   - "--min-alternate-count"

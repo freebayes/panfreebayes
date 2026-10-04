@@ -61,6 +61,7 @@ include: "rules/discover_bubbles.smk"
 include: "rules/extract_region.smk"
 include: "rules/align_region.smk"
 include: "rules/call_variants.smk"
+include: "rules/call_variants_freebayes.smk"
 
 
 rule all:
