@@ -1,0 +1,46 @@
+# panfreebayes Snakemake workflow configuration.
+#
+# Copy/edit this file (or pass --configfile path/to/yours.yaml) before running.
+# Every value here maps directly onto a parameter already established and
+# validated in scripts/panfreebayes/*.sh -- see
+# panfreebayes_milestone6_snakemake_progress.md for which values are
+# "confirmed" (instructed/validated elsewhere) vs. this workflow's own choice.
+
+# --- Inputs -----------------------------------------------------------------
+graph: "/path/to/graph.og"                       # odgi-native; NOT converted from .gfa
+deconstruct_vcf: "/path/to/deconstruct.vcf.gz"   # vg deconstruct output, plain or .gz
+
+strains:
+  DL238:  "/path/to/DL238.fastq"
+  MY2693: "/path/to/MY2693.fastq"
+  # one entry per strain; every strain is aligned against every discovered
+  # bubble's extracted reference independently (fan-out = strains x bubbles)
+
+# --- Stage 1: bubble discovery ------------------------------------------
+min_size_diff: 500   # STRICT >, confirmed manual-pipeline threshold -- do not change casually
+bubble_limit:         # null/empty = no cap; set an integer to keep only the N largest-size-diff bubbles
+
+# --- Stage 2: region extraction ------------------------------------------
+padding: 5000         # odgi extract -c
+
+# --- Stage 3: alignment ---------------------------------------------------
+minimap2_threads: 4   # minimap2 -t; samtools sort gets no -@, matching align_region.sh exactly
+minimap2_preset: "map-pb"   # minimap2 -ax value; map-pb (PacBio CLR, the data this was validated against),
+                             # map-hifi (PacBio HiFi), map-ont (Nanopore), sr (short reads) -- change this,
+                             # not the rule, to point the workflow at a different sequencing technology
+
+# --- Stage 4: variant calling ----------------------------------------------
+panfreebayes_bin: "build/panfreebayes"   # pre-built path; the workflow does not build it (see progress doc)
+freebayes_bin: "build/freebayes"          # stock freebayes, built alongside panfreebayes by the same `ninja -C build`;
+                                           # only used by the optional call_variants_freebayes equivalence rule, not `rule all`
+calling_flags:                            # forwarded verbatim after "--"; list form avoids shell-quoting ambiguity
+  - "--pooled-continuous"
+  - "--min-alternate-count"
+  - "2"
+  - "--min-alternate-fraction"
+  - "0.2"
+  - "--limit-coverage"
+  - "200"
+
+# --- Output -----------------------------------------------------------------
+results_dir: "results"   # all rule outputs written under here; use a fresh dir per distinct (graph, vcf, param-set)
