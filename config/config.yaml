@@ -25,6 +25,9 @@ padding: 5000         # odgi extract -c
 
 # --- Stage 3: alignment ---------------------------------------------------
 minimap2_threads: 4   # minimap2 -t; samtools sort gets no -@, matching align_region.sh exactly
+minimap2_preset: "map-pb"   # minimap2 -ax value; map-pb (PacBio CLR, the data this was validated against),
+                             # map-hifi (PacBio HiFi), map-ont (Nanopore), sr (short reads) -- change this,
+                             # not the rule, to point the workflow at a different sequencing technology
 
 # --- Stage 4: variant calling ----------------------------------------------
 panfreebayes_bin: "build/panfreebayes"   # pre-built path; the workflow does not build it (see progress doc)
