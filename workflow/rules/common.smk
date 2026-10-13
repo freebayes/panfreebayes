@@ -44,6 +44,34 @@ def bubble_row(wildcards):
 
 
 def all_bubble_ids(wildcards):
-    """All bubble ids discovered by the checkpoint -- drives rule all's fan-out."""
+    """All bubble ids discovered by the checkpoint -- drives rule bubble_mode's fan-out."""
     tsv = checkpoints.discover_bubbles.get().output.tsv
     return list(_load_bubbles(tsv).keys())
+
+
+# --- Whole-path extraction (extract_path.smk) -------------------------------
+#
+# A second, simpler entry point alongside bubble extraction: take one whole
+# named path from the graph (e.g. one strain's entire chromosome) and use it
+# as a complete reference, with no bubble discovery, no size-diff filtering,
+# no padding. See extract_path.smk's own header comment for why this exists
+# as a separate mode rather than folded into bubble extraction.
+
+
+def _path_id(path_name):
+    # Same '#' -> '_' convention as _bubble_id(), minus the "_<start>-<end>"
+    # suffix (there's no sub-region here, it's the whole path).
+    return path_name.replace("#", "_")
+
+
+def path_name_for(path_id):
+    """Reverse-lookup: sanitized path_id -> the real path name, from config["whole_paths"]."""
+    for name in config.get("whole_paths", []):
+        if _path_id(name) == path_id:
+            return name
+    raise ValueError(f"no configured whole_paths entry matches path_id={path_id}")
+
+
+def all_path_ids(wildcards):
+    """All configured whole-path ids -- drives rule path_mode's fan-out."""
+    return [_path_id(p) for p in config.get("whole_paths", [])]

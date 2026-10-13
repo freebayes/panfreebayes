@@ -23,6 +23,14 @@ bubble_limit:         # null/empty = no cap; set an integer to keep only the N l
 # --- Stage 2: region extraction ------------------------------------------
 padding: 5000         # odgi extract -c
 
+# --- Alternative to stages 1-2: whole-path extraction ------------------------
+# Only used by `snakemake all_paths` (see workflow/Snakefile), not `rule all`.
+# Takes one entire named path from the graph as a complete reference instead
+# of a bubble -- no discovery, no padding. Leave empty/omit if not using this
+# mode.
+whole_paths:
+  - "DL238#1#chrII_JAFETN010000011.1"
+
 # --- Stage 3: alignment ---------------------------------------------------
 minimap2_threads: 4   # minimap2 -t; samtools sort gets no -@, matching align_region.sh exactly
 minimap2_preset: "map-pb"   # minimap2 -ax value; map-pb (PacBio CLR, the data this was validated against),
