@@ -21,6 +21,15 @@ rule extract_region:
     output:
         og=f"{RESULTS}/regions/{{bubble}}.og",
         fasta=f"{RESULTS}/regions/{{bubble}}.fasta",
+    # Rule-level override, narrower than the global bubble=r"[^/]+" constraint
+    # in the Snakefile: bubble ids always end in "_<start>-<end>" (see
+    # common.smk's _bubble_id()). This makes extract_region's and
+    # extract_path's output patterns PROVABLY non-overlapping at the regex
+    # level -- not just "different by naming convention" -- which is what
+    # resolves what would otherwise be an AmbiguousRuleException the moment
+    # both rules coexist and both match regions/*.fasta.
+    wildcard_constraints:
+        bubble=r".*_[0-9]+-[0-9]+",
     params:
         path=lambda wc: bubble_row(wc)[0],
         start=lambda wc: bubble_row(wc)[1],

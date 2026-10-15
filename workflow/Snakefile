@@ -9,6 +9,13 @@
 #     <bubble>.fasta x fastq -> [align_region]  -> <strain>/<bubble>.bam (per strain x bubble)
 #     <bubble>.fasta + .bam -> [call_variants]  -> <strain>/<bubble>.vcf (per strain x bubble)
 #
+# A second, separate entry point, `rule path_mode`, coexists alongside
+# `rule bubble_mode` above: instead of bubble-scoped regions, [extract_path]
+# takes one whole named path from the graph (config["whole_paths"]) and uses
+# it as a complete reference, no bubble discovery involved. align_region/
+# call_variants are shared, unchanged, by both modes -- see
+# extract_path.smk's own header comment for why this exists.
+#
 # FIRST VERSION, NOT FINAL -- see panfreebayes_milestone6_snakemake_progress.md
 # for what's confirmed-from-instruction vs. this workflow's own design choice,
 # and what's validated (fake-stub dry run) vs. not (real odgi/minimap2/vg and
@@ -31,8 +38,9 @@
 # and rules/discover_bubbles.smk for the checkpoint-based dynamic fan-out).
 #
 # Usage:
-#   snakemake --cores N --configfile config/config.yaml all
-#   snakemake -n --configfile config/config.yaml all   # dry run
+#   snakemake --cores N --configfile config/config.yaml bubble_mode
+#   snakemake -n --configfile config/config.yaml bubble_mode   # dry run
+#   snakemake --cores N --configfile config/config.yaml path_mode    # whole-path mode instead
 #
 configfile: "config/config.yaml"
 
@@ -55,19 +63,33 @@ shell.prefix("set -euo pipefail; ")
 wildcard_constraints:
     strain=r"[^/]+",
     bubble=r"[^/]+",
+    path_id=r"[^/]+",
 
 include: "rules/common.smk"
 include: "rules/discover_bubbles.smk"
 include: "rules/extract_region.smk"
+include: "rules/extract_path.smk"
 include: "rules/align_region.smk"
 include: "rules/call_variants.smk"
 include: "rules/call_variants_freebayes.smk"
 
 
-rule all:
+rule bubble_mode:
     input:
         lambda wc: expand(
             f"{RESULTS}/calls/{{strain}}/{{bubble}}.vcf",
             strain=list(config["strains"].keys()),
             bubble=all_bubble_ids(wc),
+        ),
+
+
+# Separate target, not folded into `bubble_mode`: bubble mode and path mode
+# are two different things you may or may not want in the same run. Invoke
+# with `snakemake path_mode ...` explicitly.
+rule path_mode:
+    input:
+        lambda wc: expand(
+            f"{RESULTS}/calls/{{strain}}/{{path_id}}.vcf",
+            strain=list(config["strains"].keys()),
+            path_id=all_path_ids(wc),
         ),
