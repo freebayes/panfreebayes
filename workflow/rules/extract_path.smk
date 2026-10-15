@@ -16,34 +16,41 @@
 # opposed to the bubble-local approach extract_region.smk implements. Both
 # now coexist; see panfreebayes_milestone6_snakemake_progress.md for why.
 #
-# Deliberately reuses the exact same odgi mechanism already validated for
-# bubble extraction (odgi extract -r "<path>:<start>-<end>" + odgi paths -f),
-# confirmed on a real graph to correctly isolate to just the one named path,
-# not every path in the subgraph -- the only difference here is the region
-# span covers the path's entire length (0 to the path's own length) instead
-# of a small bubble window.
+# REVISED after a real run on vesuvio: the first version of this rule used
+# `odgi paths -i ... -L` to list path names AND lengths, to compute a
+# full-length `-r "<path>:0-<length>"` span for `odgi extract`. That was
+# wrong -- confirmed directly, not assumed: `odgi paths -L` only lists path
+# NAMES, one per line, no lengths at all. Rather than guess a second time at
+# which odgi flag actually reports lengths, this version avoids needing a
+# length (or `odgi extract`) at all: `odgi paths -i <full graph> -f` dumps
+# FASTA for every path in the graph directly (the exact same mechanism
+# already proven to work, just applied to the whole graph instead of a
+# pre-extracted subgraph), and a plain `awk` multi-FASTA-record filter keeps
+# only the one path we actually want. Simpler than the first version, and
+# removes the one place this rule was previously guessing at odgi's CLI.
 #
-# NOT YET VALIDATED against a real odgi binary: the `odgi paths -i ... -L`
-# invocation below, to list path names and lengths so the full-length -r
-# span can be computed, is written from best understanding of odgi's CLI,
-# not confirmed against real odgi --help/output. Same honesty standard as
-# everything else in this project that could only be checked with real
-# tools on vesuvio -- verify the exact flag and output format there before
-# trusting this blindly, and adjust the awk column/field below if the real
-# output format differs.
+# No `.og` output in this version -- there's no subgraph-extraction step to
+# produce one from, and nothing downstream (align_region/call_variants) ever
+# reads it; the earlier `.og` output was just extract_region's own byproduct
+# carried over by habit, not something actually needed here.
 #
-# Deliberately produces outputs under the SAME regions/{bubble}.{og,fasta}
-# path pattern extract_region.smk uses (the wildcard is named {path_id} here,
-# but that's just this rule's own internal name for it -- what matters for
+# Deliberately produces its FASTA under the SAME regions/{bubble}.fasta path
+# pattern extract_region.smk uses (the wildcard is named {path_id} here, but
+# that's just this rule's own internal name for it -- what matters for
 # Snakemake's cross-rule matching is the literal resolved file path, not the
 # wildcard variable name). align_region/call_variants downstream need ZERO
-# changes to support this new extraction mode.
+# changes to support this extraction mode.
+#
+# STILL NOT YET VALIDATED end-to-end against real data (this fix hasn't been
+# re-run on vesuvio yet) -- but the one piece of odgi behavior it depends on
+# (`odgi paths -f` producing real per-path FASTA records) has now actually
+# been exercised successfully on this real graph, unlike the length-lookup
+# approach this replaces.
 #
 rule extract_path:
     input:
         graph=config["graph"],
     output:
-        og=f"{RESULTS}/regions/{{path_id}}.og",
         fasta=f"{RESULTS}/regions/{{path_id}}.fasta",
     # Rule-level override: the exact negation of extract_region's bubble
     # constraint (must NOT end in "_<digits>-<digits>"), so the two rules'
@@ -58,11 +65,12 @@ rule extract_path:
         f"{RESULTS}/logs/extract_path/{{path_id}}.log",
     shell:
         r"""
-        length=$(odgi paths -i {input.graph} -L | awk -F'\t' -v p="{params.path_name}" '$1==p {{print $2; exit}}')
-        if [ -z "$length" ]; then
-          echo "extract_path: path not found in graph (or unexpected 'odgi paths -L' output format -- verify against real odgi): {params.path_name}" >&2
+        odgi paths -i {input.graph} -f 2> {log} | awk -v name=">{params.path_name}" '
+          /^>/ {{ keep = ($0 == name) }}
+          keep
+        ' > {output.fasta}
+        if [ ! -s {output.fasta} ]; then
+          echo "extract_path: path not found in graph: {params.path_name}" >&2
           exit 1
         fi
-        odgi extract -i {input.graph} -r "{params.path_name}:0-${{length}}" -o {output.og} > {log} 2>&1
-        odgi paths -i {output.og} -f > {output.fasta} 2>> {log}
         """
