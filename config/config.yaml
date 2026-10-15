@@ -7,12 +7,15 @@
 # "confirmed" (instructed/validated elsewhere) vs. this workflow's own choice.
 
 # --- Inputs -----------------------------------------------------------------
-graph: "/path/to/graph.og"                       # odgi-native; NOT converted from .gfa
-deconstruct_vcf: "/path/to/deconstruct.vcf.gz"   # vg deconstruct output, plain or .gz
+graph: "/home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/pggb_out_by_chrom_vcf/chrII/chrII_dl238_my2693.fasta.gz.bf3285f.11fba48.e3aa42b.smooth.final.og"
+deconstruct_vcf: "/home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/pggb_out_by_chrom_vcf/chrII/chrII_dl238_my2693.fasta.gz.bf3285f.11fba48.e3aa42b.smooth.final.DL238.vcf"
+# deconstruct_vcf is required by the Snakefile's config check even when only
+# running path_mode (which never actually reads it) -- known rough edge, the
+# required-key check isn't mode-aware; harmless to just supply the real file.
 
 strains:
-  DL238:  "/path/to/DL238.fastq"
-  MY2693: "/path/to/MY2693.fastq"
+  DL238:  "/home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/fastq/DL238_SRR13448210.fastq"
+  MY2693: "/home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/fastq/MY2693_SRR13448197.fastq"
   # one entry per strain; every strain is aligned against every discovered
   # bubble's extracted reference independently (fan-out = strains x bubbles)
 
@@ -24,12 +27,12 @@ bubble_limit:         # null/empty = no cap; set an integer to keep only the N l
 padding: 5000         # odgi extract -c
 
 # --- Alternative to stages 1-2: whole-path extraction ------------------------
-# Only used by `snakemake all_paths` (see workflow/Snakefile), not `rule all`.
-# Takes one entire named path from the graph as a complete reference instead
-# of a bubble -- no discovery, no padding. Leave empty/omit if not using this
-# mode.
+# Only used by `snakemake path_mode` (see workflow/Snakefile), not
+# `rule bubble_mode`. Takes one entire named path from the graph as a
+# complete reference instead of a bubble -- no discovery, no padding. Leave
+# empty/omit if not using this mode.
 whole_paths:
-  - "DL238#1#chrII_JAFETN010000011.1"
+  - "DL238#1#chrII_JAFETN010000011.1"   # confirmed real path name in this graph (seen in the earlier validated run's VCF/FASTA)
 
 # --- Stage 3: alignment ---------------------------------------------------
 minimap2_threads: 4   # minimap2 -t; samtools sort gets no -@, matching align_region.sh exactly
@@ -40,7 +43,7 @@ minimap2_preset: "map-pb"   # minimap2 -ax value; map-pb (PacBio CLR, the data t
 # --- Stage 4: variant calling ----------------------------------------------
 panfreebayes_bin: "build/panfreebayes"   # pre-built path; the workflow does not build it (see progress doc)
 freebayes_bin: "build/freebayes"          # stock freebayes, built alongside panfreebayes by the same `ninja -C build`;
-                                           # only used by the optional call_variants_freebayes equivalence rule, not `rule all`
+                                           # only used by the optional call_variants_freebayes equivalence rule, not bubble_mode/path_mode
 calling_flags:                            # forwarded verbatim after "--"; list form avoids shell-quoting ambiguity
   - "--pooled-continuous"
   - "--min-alternate-count"
@@ -51,4 +54,5 @@ calling_flags:                            # forwarded verbatim after "--"; list 
   - "200"
 
 # --- Output -----------------------------------------------------------------
-results_dir: "results"   # all rule outputs written under here; use a fresh dir per distinct (graph, vcf, param-set)
+results_dir: "results_path_mode"   # all rule outputs written under here; a fresh dir, since path_mode's whole-chromosome
+                                    # run is a much bigger computation than anything run against results_real_validation/ so far
