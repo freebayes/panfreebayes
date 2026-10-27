@@ -65,6 +65,19 @@ a built `panfreebayes`/`freebayes` (above). None of these need to come from
 the same environment as the build itself; only the already-compiled
 binaries matter at run time.
 
+**The `pbf` command**: `scripts/pbf` is a short front-end for the workflow. It
+fills in `--snakefile` and (unless you pass your own) `--configfile` from
+this checkout, so it works from any directory. Put it on `PATH` with a
+symlink (not a copy, since it finds the workflow next to its own real location):
+```sh
+ln -s "$PWD/scripts/pbf" ~/.local/bin/pbf     # or: export PATH="$PWD/scripts:$PATH"
+```
+`pbf bubble` runs `bubble_mode`, `pbf path` runs `path_mode`, and `pbf bubble path`
+runs both. Every other argument (`-n`, `--cores`, `--configfile my.yaml`, ...)
+goes straight to snakemake. `results_dir` is relative to the directory you
+run `pbf` from. Plain `snakemake <target> --snakefile workflow/Snakefile ...`
+still works exactly as before.
+
 1. **Edit `config/config.yaml`** with your real inputs:
    ```yaml
    graph: "/path/to/graph.og"                     # odgi-native
@@ -81,7 +94,7 @@ binaries matter at run time.
 
 2. **Dry run** to sanity-check before anything executes:
    ```sh
-   snakemake all -n --cores 1 --snakefile workflow/Snakefile --configfile config/config.yaml
+   pbf bubble -n --cores 1
    ```
    (This can only show the bubble-discovery step up front. The number of
    bubbles found, and everything downstream, isn't known until that step
@@ -90,15 +103,25 @@ binaries matter at run time.
 
 3. **Real run**:
    ```sh
-   snakemake all --cores <N> --snakefile workflow/Snakefile --configfile config/config.yaml
+   pbf bubble --cores <N>
    ```
    Output VCFs land at `<results_dir>/calls/<strain>/<bubble-id>.vcf`, one
    per strain per discovered bubble clearing the configured size threshold.
 
+**Whole-path mode, instead of bubble discovery**: set `whole_paths` in
+`config/config.yaml` to one or more path names from the graph, then run
+`pbf path --cores <N>` in place of `pbf bubble`. This
+extracts each listed path in full and uses it as a complete reference, no
+bubble discovery or padding involved. See "What each stage does" below.
+
 ### What each stage does
 
-The workflow is five Snakemake rules, each in its own file under
-`workflow/rules/`, run in this order:
+The workflow is six Snakemake rules, each in its own file under
+`workflow/rules/`. `discover_bubbles` → `extract_region` is one way to
+reach a reference (bubble-local regions found by scanning a graph for
+structurally divergent sites); `extract_path` is a second, independent way
+(an entire named path from the graph, used whole, no discovery involved).
+Both feed into the same `align_region`/`call_variants` steps.
 
 - **`discover_bubbles`** (`discover_bubbles.smk`). Scans the `deconstruct_vcf`
   and, for every site, computes `|REF length - ALT length|`. Sites where
@@ -112,6 +135,14 @@ The workflow is five Snakemake rules, each in its own file under
   `odgi extract` to pull just that region (plus `padding` extra bases on
   each side) out of the graph, then `odgi paths -f` to write it out as a
   plain FASTA. Produces `<bubble>.og` and `<bubble>.fasta`.
+- **`extract_path`** (`extract_path.smk`). Alternative to the two rules
+  above: given one path name listed in `whole_paths` in the config, dumps
+  FASTA for every path in the graph with `odgi paths -f` and keeps only the
+  one record that matches (no bubble discovery, no padding, no subgraph
+  extraction needed). Produces `<path-id>.fasta`. Reached via
+  `pbf path ...` instead of `pbf bubble ...`, kept as
+  a separate target since the two modes are different things you may or may
+  not want in the same run.
 - **`align_region`** (`align_region.smk`). For one strain and one bubble,
   aligns that strain's FASTQ reads against the extracted FASTA with
   `minimap2` (preset from `minimap2_preset`), then sorts and indexes the
