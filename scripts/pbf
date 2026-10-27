@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+#
+# pbf -- short front-end for the panfreebayes Snakemake workflow.
+#
+#   pbf bubble --cores 8          ->  snakemake bubble_mode ...
+#   pbf path -n                   ->  snakemake path_mode ... (dry run)
+#   pbf bubble path --cores 8     ->  both targets in one run
+#
+# Fills in --snakefile (always) and --configfile (unless one is given) from
+# this checkout, so it can be run from any directory; results_dir in the
+# config is relative to the directory you run it from. Every other argument
+# is passed through to snakemake unchanged. --cores is deliberately NOT
+# defaulted -- pass it yourself, as with plain snakemake.
+#
+# Install by symlinking onto PATH (not by copying -- the script locates the
+# workflow relative to its own real location):
+#   ln -s "$PWD/scripts/pbf" ~/.local/bin/pbf
+#
+set -euo pipefail
+
+usage() {
+    cat <<EOF
+usage: pbf <mode> [<mode> ...] [snakemake args...]
+
+modes:
+  bubble   bubble discovery -> region extraction -> align -> call (bubble_mode)
+  path     whole-path reference from config whole_paths -> align -> call (path_mode)
+
+examples:
+  pbf bubble -n --cores 1
+  pbf path --cores 8
+  pbf bubble path --cores 8 --configfile my.yaml
+EOF
+}
+
+# Resolve this script's real location, following symlinks (portable: no
+# reliance on GNU readlink -f, which older macOS lacks).
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ "$src" != /* ]] && src="$dir/$src"
+done
+REPO="$(cd -P "$(dirname "$src")/.." && pwd)"
+
+targets=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        bubble) targets+=(bubble_mode); shift ;;
+        path)   targets+=(path_mode);   shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) break ;;
+    esac
+done
+
+if [ ${#targets[@]} -eq 0 ]; then
+    usage >&2
+    exit 2
+fi
+
+extra=(--snakefile "$REPO/workflow/Snakefile")
+has_configfile=0
+for arg in "$@"; do
+    case "$arg" in
+        --configfile|--configfile=*|--configfiles|--configfiles=*) has_configfile=1 ;;
+    esac
+done
+if [ $has_configfile -eq 0 ]; then
+    extra+=(--configfile "$REPO/config/config.yaml")
+fi
+
+exec snakemake "${targets[@]}" "${extra[@]}" "$@"

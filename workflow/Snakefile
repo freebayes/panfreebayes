@@ -42,7 +42,17 @@
 #   snakemake -n --configfile config/config.yaml bubble_mode   # dry run
 #   snakemake --cores N --configfile config/config.yaml path_mode    # whole-path mode instead
 #
-configfile: "config/config.yaml"
+# or, equivalently and from any directory, via the scripts/pbf wrapper:
+#   pbf bubble --cores N
+#   pbf path --cores N
+#
+import os
+
+# Repo root, so repo-relative paths (default config, build/ binaries) resolve
+# the same no matter which directory snakemake/pbf is run from.
+REPO = os.path.abspath(os.path.join(workflow.basedir, ".."))
+
+configfile: os.path.join(REPO, "config", "config.yaml")
 
 RESULTS = config.get("results_dir", "results")
 
@@ -54,6 +64,13 @@ if _missing:
     raise SystemExit(
         "config.yaml is missing required key(s): " + ", ".join(_missing)
     )
+
+# Relative binary paths like "build/panfreebayes" are relative to the repo,
+# not the cwd. Bare names (looked up on PATH) and absolute paths are left as-is.
+for _k in ("panfreebayes_bin", "freebayes_bin"):
+    _v = config.get(_k)
+    if _v and "/" in _v and not os.path.isabs(_v):
+        config[_k] = os.path.join(REPO, _v)
 
 # Explicit, not implicit: a minimap2 failure must fail align_region even
 # though it's the left side of a pipe into samtools sort -- mirrors
