@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# pbf -- short front-end for the panfreebayes Snakemake workflow.
+# pfb -- short front-end for the panfreebayes Snakemake workflow.
 #
-#   pbf bubble --cores 8          ->  snakemake bubble_mode ...
-#   pbf path -n                   ->  snakemake path_mode ... (dry run)
-#   pbf bubble path --cores 8     ->  both targets in one run
+#   pfb bubble --cores 8          ->  snakemake bubble_mode ...
+#   pfb path -n                   ->  snakemake path_mode ... (dry run)
+#   pfb bubble path --cores 8     ->  both targets in one run
 #
 # Fills in --snakefile (always) and --configfile (unless one is given) from
 # this checkout, so it can be run from any directory; results_dir in the
@@ -14,22 +14,22 @@
 #
 # Install by symlinking onto PATH (not by copying -- the script locates the
 # workflow relative to its own real location):
-#   ln -s "$PWD/scripts/pbf" ~/.local/bin/pbf
+#   ln -s "$PWD/scripts/pfb" ~/.local/bin/pfb
 #
 set -euo pipefail
 
 usage() {
     cat <<EOF
-usage: pbf <mode> [<mode> ...] [snakemake args...]
+usage: pfb <mode> [<mode> ...] [snakemake args...]
 
 modes:
   bubble   bubble discovery -> region extraction -> align -> call (bubble_mode)
   path     whole-path reference from config whole_paths -> align -> call (path_mode)
 
 examples:
-  pbf bubble -n --cores 1
-  pbf path --cores 8
-  pbf bubble path --cores 8 --configfile my.yaml
+  pfb bubble -n --cores 1
+  pfb path --cores 8
+  pfb bubble path --cores 8 --configfile my.yaml
 EOF
 }
 

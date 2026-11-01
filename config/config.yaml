@@ -31,6 +31,9 @@ padding: 5000         # odgi extract -c
 # `rule bubble_mode`. Takes one entire named path from the graph as a
 # complete reference instead of a bubble -- no discovery, no padding. Leave
 # empty/omit if not using this mode.
+# An entry may also be "<path>:<start>-<end>" (1-based, inclusive, samtools
+# region syntax) to use just that sub-range of the path instead of all of it,
+# e.g. "DL238#1#chrII_JAFETN010000011.1:1659999-1753588".
 whole_paths:
   - "DL238#1#chrII_JAFETN010000011.1"   # confirmed real path name in this graph (seen in the earlier validated run's VCF/FASTA)
 
