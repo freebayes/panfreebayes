@@ -42,14 +42,14 @@
 #   snakemake -n --configfile config/config.yaml bubble_mode   # dry run
 #   snakemake --cores N --configfile config/config.yaml path_mode    # whole-path mode instead
 #
-# or, equivalently and from any directory, via the scripts/pbf wrapper:
-#   pbf bubble --cores N
-#   pbf path --cores N
+# or, equivalently and from any directory, via the scripts/pfb wrapper:
+#   pfb bubble --cores N
+#   pfb path --cores N
 #
 import os
 
 # Repo root, so repo-relative paths (default config, build/ binaries) resolve
-# the same no matter which directory snakemake/pbf is run from.
+# the same no matter which directory snakemake/pfb is run from.
 REPO = os.path.abspath(os.path.join(workflow.basedir, ".."))
 
 configfile: os.path.join(REPO, "config", "config.yaml")
