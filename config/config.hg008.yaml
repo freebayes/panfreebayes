@@ -13,7 +13,10 @@
 # No deconstruct_vcf / min_size_diff / padding: those are bubble_mode only.
 
 # --- Inputs -----------------------------------------------------------------
-graph: "/path/to/graph.gbz"   # .gbz (needs vg on PATH) or .og (needs odgi)
+graph: "/path/to/graph.ref.gbz"   # .gbz (needs vg on PATH) or .og (needs odgi)
+# A .gbz MUST have at least one reference sample set, otherwise `vg paths`
+# refuses the graph ("graph does not contain any paths"). Make one with:
+#   vg gbwt -Z in.gbz --set-reference <SAMPLE> [--set-reference ...] --gbz-format -g out.ref.gbz
 
 haplotypes:                   # PanSN "<sample>#<hap>" prefixes; all paths "<sample>#<hap>#..." are used
   - "HG00423#1"

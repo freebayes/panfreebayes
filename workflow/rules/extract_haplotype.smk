@@ -10,13 +10,22 @@
 # whole BAM across every contig), not one job per contig.
 #
 # Graph format is picked from the extension of config["graph"]:
-#   .gbz  vg paths -x <graph> -L  -> names matching the prefix
-#         vg paths -x <graph> -F -p <names>
+#   .gbz  vg paths -x <graph> -F -Q '<sample>#<hap>#'   (one command; -Q
+#         selects paths by name prefix). Not `-L` then `-F -p <names>`:
+#         on vg v1.71.0, `-L`/`-L -H` fail with "graph does not contain any
+#         paths" on a GBZ with no reference sample set, and -H can't be
+#         combined with -p ("multiple selection criteria").
+#         REQUIREMENT: the GBZ must have at least one reference sample
+#         set, or vg paths refuses the graph entirely. Make one with:
+#           vg gbwt -Z in.gbz --set-reference <SAMPLE> [--set-reference ...] \
+#             --gbz-format -g out.gbz
+#         Haplotype path names carry a trailing phase-block field, e.g.
+#         "HG00423#1#JBHIIO010000010.1#0"; FASTA headers are kept exactly as
+#         vg prints them.
 #   .og   odgi paths -i <graph> -f, keeping records whose header starts
-#         with the prefix (same mechanism extract_path.smk uses)
-#
-# The prefix match is a literal string compare (awk index() == 1), not a
-# regex, so '.' etc. in sample names can't over-match.
+#         with the prefix (same mechanism extract_path.smk uses); the
+#         match is a literal string compare (awk index() == 1), not a
+#         regex, so '.' etc. in sample names can't over-match.
 #
 # Output goes under the same regions/<id>.fasta pattern as the other two
 # extraction rules, so align_region/call_variants need no changes; the
@@ -44,16 +53,7 @@ rule extract_haplotype:
         : > {log}
         case "{input.graph}" in
           *.gbz)
-            names={output.fasta}.names
-            vg paths -x {input.graph} -L 2>> {log} \
-              | awk -v p="{params.prefix}" 'index($0, p) == 1' > "$names"
-            if [ ! -s "$names" ]; then
-              rm -f "$names"
-              echo "extract_haplotype: no graph path starts with '{params.prefix}' in {input.graph}" >&2
-              exit 1
-            fi
-            vg paths -x {input.graph} -F -p "$names" > "$tmp" 2>> {log}
-            rm -f "$names"
+            vg paths -x {input.graph} -F -Q '{params.prefix}' > "$tmp" 2>> {log}
             ;;
           *.og)
             odgi paths -i {input.graph} -f 2>> {log} | awk -v p=">{params.prefix}" '

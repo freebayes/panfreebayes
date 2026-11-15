@@ -132,6 +132,15 @@ pfb haplotype --cores <N> --configfile config/config.hg008.yaml
 placeholders). What's specific to this mode:
 - **Graph**: `.gbz` (extracted with `vg paths`) or `.og` (`odgi paths`),
   picked by file extension. **`vg` must be on `PATH` for `.gbz` graphs.**
+  **A `.gbz` must have at least one reference sample set**, otherwise
+  `vg paths` refuses the graph ("graph does not contain any paths").
+  Add one with:
+  ```sh
+  vg gbwt -Z in.gbz --set-reference <SAMPLE> [--set-reference ...] --gbz-format -g out.ref.gbz
+  ```
+  Haplotype paths are selected by name prefix (`vg paths -F -Q '<sample>#<hap>#'`),
+  and FASTA headers are kept exactly as `vg` prints them, including the
+  trailing phase-block field (e.g. `HG00423#1#JBHIIO010000010.1#0`).
   The extracted contig names and lengths are written to
   `<results_dir>/logs/extract_haplotype/<hap_id>.log`; the step fails if no
   path matches the prefix.
