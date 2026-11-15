@@ -59,7 +59,16 @@ import os
 # the same no matter which directory snakemake/pfb is run from.
 REPO = os.path.abspath(os.path.join(workflow.basedir, ".."))
 
-configfile: os.path.join(REPO, "config", "config.yaml")
+# Default config ONLY when none was given on the command line. A plain
+# `configfile:` directive is always loaded and the --configfile contents are
+# then deep-merged over it, so e.g. config.hg008.yaml's strains would be
+# ADDED to the default's DL238/MY2693 instead of replacing them. `config` is
+# already populated from --configfile/--config before this file runs, so an
+# empty one means nothing was passed. (Caveat: plain `snakemake --config k=v`
+# with no --configfile also counts as "given" and skips the default; pfb
+# always passes a --configfile, so it isn't affected.)
+if not config:
+    configfile: os.path.join(REPO, "config", "config.yaml")
 
 RESULTS = config.get("results_dir", "results")
 
