@@ -34,7 +34,7 @@ rule extract_region:
         path=lambda wc: bubble_row(wc)[0],
         start=lambda wc: bubble_row(wc)[1],
         end=lambda wc: bubble_row(wc)[2],
-        padding=config["padding"],
+        padding=lambda wc: require_config("padding", "bubble_mode"),
     log:
         f"{RESULTS}/logs/extract_region/{{bubble}}.log",
     shell:
