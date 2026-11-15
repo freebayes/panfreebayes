@@ -33,7 +33,9 @@ rule call_variants_freebayes:
     output:
         vcf=f"{RESULTS}/calls_freebayes/{{strain}}/{{bubble}}.vcf",
     params:
-        fb=config["freebayes_bin"],
+        # Lazy: only needed when this optional rule is actually requested,
+        # so configs without freebayes_bin (e.g. config.hg008.yaml) still parse.
+        fb=lambda wc: require_config("freebayes_bin", "call_variants_freebayes"),
         flags=" ".join(config["calling_flags"]),
     log:
         f"{RESULTS}/logs/call_variants_freebayes/{{strain}}/{{bubble}}.log",

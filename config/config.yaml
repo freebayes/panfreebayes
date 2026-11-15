@@ -9,15 +9,16 @@
 # --- Inputs -----------------------------------------------------------------
 graph: "/home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/pggb_out_by_chrom_vcf/chrII/chrII_dl238_my2693.fasta.gz.bf3285f.11fba48.e3aa42b.smooth.final.og"
 deconstruct_vcf: "/home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/pggb_out_by_chrom_vcf/chrII/chrII_dl238_my2693.fasta.gz.bf3285f.11fba48.e3aa42b.smooth.final.DL238.vcf"
-# deconstruct_vcf is required by the Snakefile's config check even when only
-# running path_mode (which never actually reads it) -- known rough edge, the
-# required-key check isn't mode-aware; harmless to just supply the real file.
+# deconstruct_vcf (and min_size_diff/padding below) are only required for
+# bubble_mode; path_mode and haplotype_mode never read them.
 
 strains:
   DL238:  "/home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/fastq/DL238_SRR13448210.fastq"
   MY2693: "/home/hasitha/data/projects/graph_freebayes/pggb_2strain_test/fastq/MY2693_SRR13448197.fastq"
   # one entry per strain; every strain is aligned against every discovered
   # bubble's extracted reference independently (fan-out = strains x bubbles)
+  # an entry may also be paired-end:  name: {r1: "/path/R1.fastq.gz", r2: "/path/R2.fastq.gz"}
+  # each strain's reads get read group ID/SM = its name here
 
 # --- Stage 1: bubble discovery ------------------------------------------
 min_size_diff: 500   # STRICT >, confirmed manual-pipeline threshold -- do not change casually
@@ -38,7 +39,7 @@ whole_paths:
   - "DL238#1#chrII_JAFETN010000011.1"   # confirmed real path name in this graph (seen in the earlier validated run's VCF/FASTA)
 
 # --- Stage 3: alignment ---------------------------------------------------
-minimap2_threads: 4   # minimap2 -t; samtools sort gets no -@, matching align_region.sh exactly
+minimap2_threads: 4   # minimap2 -t and samtools sort -@
 minimap2_preset: "map-pb"   # minimap2 -ax value; map-pb (PacBio CLR, the data this was validated against),
                              # map-hifi (PacBio HiFi), map-ont (Nanopore), sr (short reads) -- change this,
                              # not the rule, to point the workflow at a different sequencing technology

@@ -56,9 +56,11 @@ rule extract_path:
     # constraint (must NOT end in "_<digits>-<digits>"), so the two rules'
     # output patterns are provably non-overlapping -- see extract_region.smk's
     # own comment on this; without it, Snakemake can't tell which rule should
-    # produce a given regions/*.fasta path once both exist.
+    # produce a given regions/*.fasta path once both exist. Also limited to
+    # the configured whole_paths ids, so it can't overlap extract_haplotype's
+    # regions/*.fasta either (see common.smk's PATH_ID_REGEX).
     wildcard_constraints:
-        path_id=r"(?!.*_[0-9]+-[0-9]+$).*",
+        path_id=PATH_ID_REGEX,
     params:
         path_name=lambda wc: path_entry_for(wc.path_id)[0],
         # "" for a whole path; else a samtools region "<path>:<start>-<end>"

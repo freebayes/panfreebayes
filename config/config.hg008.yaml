@@ -1,0 +1,49 @@
+# panfreebayes Snakemake workflow configuration -- HG008 tumour/normal
+# TEMPLATE for haplotype_mode. Replace every /path/to/... placeholder.
+#
+#   pfb haplotype -n --cores 1 --configfile config/config.hg008.yaml   # dry run
+#   pfb haplotype --cores <N> --configfile config/config.hg008.yaml
+#
+# Uses every path of each haplotype below as ONE reference (all its
+# contigs), aligns tumour and normal short reads to it, and calls them
+# jointly into one VCF with a column per sample:
+#   <results_dir>/calls/joint/<hap_id>.vcf     e.g. HG00423_1.vcf
+# See workflow/rules/extract_haplotype.smk and call_variants_joint.smk.
+#
+# No deconstruct_vcf / min_size_diff / padding: those are bubble_mode only.
+
+# --- Inputs -----------------------------------------------------------------
+graph: "/path/to/graph.ref.gbz"   # .gbz (needs vg on PATH) or .og (needs odgi)
+# A .gbz MUST have at least one reference sample set, otherwise `vg paths`
+# refuses the graph ("graph does not contain any paths"). Make one with:
+#   vg gbwt -Z in.gbz --set-reference <SAMPLE> [--set-reference ...] --gbz-format -g out.ref.gbz
+
+haplotypes:                   # PanSN "<sample>#<hap>" prefixes; all paths "<sample>#<hap>#..." are used
+  - "HG00423#1"
+
+strains:                      # paired-end: {r1, r2}; read group ID/SM = the name here
+  tumour:
+    r1: "/path/to/tumour_R1.fastq.gz"
+    r2: "/path/to/tumour_R2.fastq.gz"
+  normal:
+    r1: "/path/to/normal_R1.fastq.gz"
+    r2: "/path/to/normal_R2.fastq.gz"
+
+# --- Alignment ----------------------------------------------------------------
+minimap2_threads: 8           # minimap2 -t, samtools sort/merge -@
+minimap2_preset: "sr"         # short reads; also adds PL:ILLUMINA to the read group
+
+# --- Variant calling ------------------------------------------------------------
+joint: true                   # one multi-sample VCF per haplotype instead of one per strain
+panfreebayes_bin: "build/panfreebayes"
+calling_flags:                # forwarded verbatim after "--"
+  - "--pooled-continuous"
+  - "--min-alternate-count"
+  - "3"
+  - "--min-alternate-fraction"
+  - "0.05"
+  - "--limit-coverage"
+  - "200"
+
+# --- Output -----------------------------------------------------------------
+results_dir: "results_hg008"

@@ -1,11 +1,17 @@
 #
 # Stage 3 -- alignment (per strain x bubble).
 #
-#   minimap2 -ax <preset> -t <threads> <ref.fasta> <fastq> | samtools sort -o <bam>
+#   minimap2 -ax <preset> -t <threads> -R <read group> <ref.fasta> <fastq> [<fastq2>]
+#       | samtools sort -@ <threads> -o <bam>
 #   samtools index <bam>
 #
-# No flags beyond what's shown are added (confirmed by the supervisor that
-# none else were used -- in particular, `samtools sort` gets no -@).
+# The original manual pipeline used no -R and no `samtools sort -@`; both
+# were added for multi-sample/joint calling (haplotype_mode):
+#   - -R '@RG\tID:<strain>\tSM:<strain>[\tPL:ILLUMINA]' is always set (PL only
+#     for preset sr), so each sample keeps its own name through a merged BAM
+#     and gets its own VCF column. See common.smk's read_group().
+#   - a strains entry may be {r1: ..., r2: ...}; both files go to minimap2
+#     as a pair. See common.smk's strain_reads().
 #
 # <preset> is config["minimap2_preset"] (default "map-pb", the PacBio CLR
 # preset this workflow was first validated against) -- NOT hardcoded, so a
@@ -28,18 +34,20 @@
 rule align_region:
     input:
         ref=f"{RESULTS}/regions/{{bubble}}.fasta",
-        fastq=lambda wc: config["strains"][wc.strain],
+        fastq=lambda wc: strain_reads(wc.strain),
     output:
         bam=f"{RESULTS}/alignments/{{strain}}/{{bubble}}.bam",
         bai=f"{RESULTS}/alignments/{{strain}}/{{bubble}}.bam.bai",
     params:
         preset=config.get("minimap2_preset", "map-pb"),
+        rg=lambda wc: read_group(wc.strain),
     threads: config["minimap2_threads"]
     log:
         f"{RESULTS}/logs/align_region/{{strain}}/{{bubble}}.log",
     shell:
         r"""
-        minimap2 -ax {params.preset} -t {threads} {input.ref} {input.fastq} 2> {log} \
-            | samtools sort -o {output.bam} 2>> {log}
+        minimap2 -ax {params.preset} -t {threads} -R '{params.rg}' \
+            {input.ref} {input.fastq} 2> {log} \
+            | samtools sort -@ {threads} -o {output.bam} 2>> {log}
         samtools index {output.bam} 2>> {log}
         """

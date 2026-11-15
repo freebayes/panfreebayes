@@ -61,7 +61,8 @@ aligning reads, and calling variants) across any number of strains and any
 number of discovered bubbles at once.
 
 **Requirements on `PATH`**: `snakemake`, `odgi`, `minimap2`, `samtools`, and
-a built `panfreebayes`/`freebayes` (above). None of these need to come from
+a built `panfreebayes`/`freebayes` (above), plus `vg` for haplotype mode on
+a `.gbz` graph. None of these need to come from
 the same environment as the build itself; only the already-compiled
 binaries matter at run time.
 
@@ -114,6 +115,47 @@ still works exactly as before.
 extracts each listed path in full and uses it as a complete reference, no
 bubble discovery or padding involved. See "What each stage does" below.
 
+### Haplotype mode (e.g. HG008 tumour/normal)
+
+Uses **every path of one haplotype** as a single reference: for each
+`"<sample>#<hap>"` prefix in `haplotypes:` (e.g. `"HG00423#1"`), all graph
+paths named `<sample>#<hap>#...` are extracted into one multi-contig FASTA,
+`<results_dir>/regions/<sample>_<hap>.fasta`. Each strain is aligned to it
+once and called once (not once per contig).
+
+```sh
+pfb haplotype -n --cores 1 --configfile config/config.hg008.yaml   # dry run
+pfb haplotype --cores <N> --configfile config/config.hg008.yaml
+```
+
+`config/config.hg008.yaml` is a template (graph, FASTQ paths are
+placeholders). What's specific to this mode:
+- **Graph**: `.gbz` (extracted with `vg paths`) or `.og` (`odgi paths`),
+  picked by file extension. **`vg` must be on `PATH` for `.gbz` graphs.**
+  **A `.gbz` must have at least one reference sample set**, otherwise
+  `vg paths` refuses the graph ("graph does not contain any paths").
+  Add one with:
+  ```sh
+  vg gbwt -Z in.gbz --set-reference <SAMPLE> [--set-reference ...] --gbz-format -g out.ref.gbz
+  ```
+  Haplotype paths are selected by name prefix (`vg paths -F -Q '<sample>#<hap>#'`),
+  and FASTA headers are kept exactly as `vg` prints them, including the
+  trailing phase-block field (e.g. `HG00423#1#JBHIIO010000010.1#0`).
+  The extracted contig names and lengths are written to
+  `<results_dir>/logs/extract_haplotype/<hap_id>.log`; the step fails if no
+  path matches the prefix.
+- **Paired-end reads**: a `strains:` entry can be `{r1: ..., r2: ...}` as
+  well as a single FASTQ (this works in every mode). Every alignment gets a
+  read group with `ID`/`SM` set to the strain name (`PL:ILLUMINA` too with
+  `minimap2_preset: "sr"`).
+- **Joint calling**: with `joint: true`, all strains' BAMs are merged and
+  called together into one VCF with a column per sample,
+  `<results_dir>/calls/joint/<hap_id>.vcf`. Without it, you get one VCF per
+  strain, as in the other modes. `joint` can't be used as a strain name.
+
+`deconstruct_vcf`, `min_size_diff` and `padding` are only needed for bubble
+mode.
+
 ### What each stage does
 
 The workflow is six Snakemake rules, each in its own file under
@@ -121,7 +163,10 @@ The workflow is six Snakemake rules, each in its own file under
 reach a reference (bubble-local regions found by scanning a graph for
 structurally divergent sites); `extract_path` is a second, independent way
 (an entire named path from the graph, used whole, no discovery involved).
-Both feed into the same `align_region`/`call_variants` steps.
+`extract_haplotype` is a third (all paths of one haplotype as one
+multi-contig reference; see "Haplotype mode" above, which also covers the
+optional joint-calling rules `merge_bams`/`call_variants_joint`). All of
+them feed into the same `align_region`/`call_variants` steps.
 
 - **`discover_bubbles`** (`discover_bubbles.smk`). Scans the `deconstruct_vcf`
   and, for every site, computes `|REF length - ALT length|`. Sites where

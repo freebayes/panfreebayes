@@ -28,11 +28,11 @@
 #
 checkpoint discover_bubbles:
     input:
-        vcf=config["deconstruct_vcf"],
+        vcf=lambda wc: require_config("deconstruct_vcf", "bubble_mode"),
     output:
         tsv=f"{RESULTS}/bubbles/bubbles.tsv",
     params:
-        min_size_diff=config["min_size_diff"],
+        min_size_diff=lambda wc: require_config("min_size_diff", "bubble_mode"),
         limit=lambda wc: config.get("bubble_limit") or "",
     log:
         f"{RESULTS}/logs/discover_bubbles.log",
