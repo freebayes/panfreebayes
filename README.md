@@ -65,17 +65,17 @@ a built `panfreebayes`/`freebayes` (above). None of these need to come from
 the same environment as the build itself; only the already-compiled
 binaries matter at run time.
 
-**The `pbf` command**: `scripts/pbf` is a short front-end for the workflow. It
+**The `pfb` command**: `scripts/pfb` is a short front-end for the workflow. It
 fills in `--snakefile` and (unless you pass your own) `--configfile` from
 this checkout, so it works from any directory. Put it on `PATH` with a
 symlink (not a copy, since it finds the workflow next to its own real location):
 ```sh
-ln -s "$PWD/scripts/pbf" ~/.local/bin/pbf     # or: export PATH="$PWD/scripts:$PATH"
+ln -s "$PWD/scripts/pfb" ~/.local/bin/pfb     # or: export PATH="$PWD/scripts:$PATH"
 ```
-`pbf bubble` runs `bubble_mode`, `pbf path` runs `path_mode`, and `pbf bubble path`
+`pfb bubble` runs `bubble_mode`, `pfb path` runs `path_mode`, and `pfb bubble path`
 runs both. Every other argument (`-n`, `--cores`, `--configfile my.yaml`, ...)
 goes straight to snakemake. `results_dir` is relative to the directory you
-run `pbf` from. Plain `snakemake <target> --snakefile workflow/Snakefile ...`
+run `pfb` from. Plain `snakemake <target> --snakefile workflow/Snakefile ...`
 still works exactly as before.
 
 1. **Edit `config/config.yaml`** with your real inputs:
@@ -94,7 +94,7 @@ still works exactly as before.
 
 2. **Dry run** to sanity-check before anything executes:
    ```sh
-   pbf bubble -n --cores 1
+   pfb bubble -n --cores 1
    ```
    (This can only show the bubble-discovery step up front. The number of
    bubbles found, and everything downstream, isn't known until that step
@@ -103,14 +103,14 @@ still works exactly as before.
 
 3. **Real run**:
    ```sh
-   pbf bubble --cores <N>
+   pfb bubble --cores <N>
    ```
    Output VCFs land at `<results_dir>/calls/<strain>/<bubble-id>.vcf`, one
    per strain per discovered bubble clearing the configured size threshold.
 
 **Whole-path mode, instead of bubble discovery**: set `whole_paths` in
 `config/config.yaml` to one or more path names from the graph, then run
-`pbf path --cores <N>` in place of `pbf bubble`. This
+`pfb path --cores <N>` in place of `pfb bubble`. This
 extracts each listed path in full and uses it as a complete reference, no
 bubble discovery or padding involved. See "What each stage does" below.
 
@@ -140,7 +140,7 @@ Both feed into the same `align_region`/`call_variants` steps.
   FASTA for every path in the graph with `odgi paths -f` and keeps only the
   one record that matches (no bubble discovery, no padding, no subgraph
   extraction needed). Produces `<path-id>.fasta`. Reached via
-  `pbf path ...` instead of `pbf bubble ...`, kept as
+  `pfb path ...` instead of `pfb bubble ...`, kept as
   a separate target since the two modes are different things you may or may
   not want in the same run.
 - **`align_region`** (`align_region.smk`). For one strain and one bubble,

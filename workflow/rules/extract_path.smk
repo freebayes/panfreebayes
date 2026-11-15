@@ -60,17 +60,35 @@ rule extract_path:
     wildcard_constraints:
         path_id=r"(?!.*_[0-9]+-[0-9]+$).*",
     params:
-        path_name=lambda wc: path_name_for(wc.path_id),
+        path_name=lambda wc: path_entry_for(wc.path_id)[0],
+        # "" for a whole path; else a samtools region "<path>:<start>-<end>"
+        # to crop the extracted path down to.
+        region=lambda wc: (
+            ""
+            if path_entry_for(wc.path_id)[1] is None
+            else "{}:{}-{}".format(*path_entry_for(wc.path_id))
+        ),
     log:
         f"{RESULTS}/logs/extract_path/{{path_id}}.log",
     shell:
         r"""
+        full={output.fasta}.full
         odgi paths -i {input.graph} -f 2> {log} | awk -v name=">{params.path_name}" '
           /^>/ {{ keep = ($0 == name) }}
           keep
-        ' > {output.fasta}
-        if [ ! -s {output.fasta} ]; then
+        ' > "$full"
+        if [ ! -s "$full" ]; then
           echo "extract_path: path not found in graph: {params.path_name}" >&2
           exit 1
+        fi
+        if [ -n "{params.region}" ]; then
+          samtools faidx "$full" "{params.region}" > {output.fasta} 2>> {log}
+          rm -f "$full" "$full.fai"
+          if ! grep -qv '^>' {output.fasta}; then
+            echo "extract_path: region is empty / out of range: {params.region}" >&2
+            exit 1
+          fi
+        else
+          mv "$full" {output.fasta}
         fi
         """

@@ -58,17 +58,38 @@ def all_bubble_ids(wildcards):
 # as a separate mode rather than folded into bubble extraction.
 
 
-def _path_id(path_name):
-    # Same '#' -> '_' convention as _bubble_id(), minus the "_<start>-<end>"
-    # suffix (there's no sub-region here, it's the whole path).
-    return path_name.replace("#", "_")
+import re
+
+# A whole_paths entry is either a bare path name (the whole path) or
+# "<path>:<start>-<end>" (1-based, inclusive -- samtools region syntax) to
+# keep only that sub-range of the path.
+_RANGE_RE = re.compile(r"^(.*):([0-9]+)-([0-9]+)$")
 
 
-def path_name_for(path_id):
-    """Reverse-lookup: sanitized path_id -> the real path name, from config["whole_paths"]."""
-    for name in config.get("whole_paths", []):
-        if _path_id(name) == path_id:
-            return name
+def _parse_path_entry(entry):
+    """'<path>[:<start>-<end>]' -> (path, start, end); start/end None for a whole path."""
+    m = _RANGE_RE.match(entry)
+    if m:
+        return m.group(1), int(m.group(2)), int(m.group(3))
+    return entry, None, None
+
+
+def _path_id(entry):
+    # Same '#' -> '_' convention as _bubble_id(). A sub-range gets a
+    # "_sub<start>-<end>" suffix -- NOT bubble's "_<start>-<end>", which
+    # extract_region's wildcard constraint would claim instead.
+    path, start, end = _parse_path_entry(entry)
+    pid = path.replace("#", "_")
+    if start is not None:
+        pid += f"_sub{start}-{end}"
+    return pid
+
+
+def path_entry_for(path_id):
+    """Reverse-lookup: path_id -> (path, start, end), from config["whole_paths"]."""
+    for entry in config.get("whole_paths", []):
+        if _path_id(entry) == path_id:
+            return _parse_path_entry(entry)
     raise ValueError(f"no configured whole_paths entry matches path_id={path_id}")
 
 
