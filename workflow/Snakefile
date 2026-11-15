@@ -16,6 +16,11 @@
 # call_variants are shared, unchanged, by both modes -- see
 # extract_path.smk's own header comment for why this exists.
 #
+# A third, `rule haplotype_mode`, uses every path of one "<sample>#<hap>"
+# (config["haplotypes"]) as one multi-contig reference, from a .gbz or .og
+# graph [extract_haplotype], optionally calling all strains jointly into one
+# multi-sample VCF (config["joint"], [merge_bams] + [call_variants_joint]).
+#
 # FIRST VERSION, NOT FINAL -- see panfreebayes_milestone6_snakemake_progress.md
 # for what's confirmed-from-instruction vs. this workflow's own design choice,
 # and what's validated (fake-stub dry run) vs. not (real odgi/minimap2/vg and
@@ -41,10 +46,12 @@
 #   snakemake --cores N --configfile config/config.yaml bubble_mode
 #   snakemake -n --configfile config/config.yaml bubble_mode   # dry run
 #   snakemake --cores N --configfile config/config.yaml path_mode    # whole-path mode instead
+#   snakemake --cores N --configfile config/config.hg008.yaml haplotype_mode
 #
 # or, equivalently and from any directory, via the scripts/pfb wrapper:
 #   pfb bubble --cores N
 #   pfb path --cores N
+#   pfb haplotype --cores N --configfile config/config.hg008.yaml
 #
 import os
 
@@ -58,7 +65,11 @@ RESULTS = config.get("results_dir", "results")
 
 # Minimal, dependency-free required-key check. No config.schema.yaml/validate()
 # in this first version -- deliberately kept simple; see the progress doc.
-_REQUIRED = ["graph", "deconstruct_vcf", "strains", "panfreebayes_bin", "calling_flags"]
+# Only keys every mode needs are checked here. Mode-specific keys
+# (deconstruct_vcf, min_size_diff, padding for bubble_mode) are checked
+# lazily by require_config() (rules/common.smk), only when a rule that
+# reads them is actually part of the requested DAG.
+_REQUIRED = ["graph", "strains", "panfreebayes_bin", "calling_flags"]
 _missing = [k for k in _REQUIRED if k not in config or config[k] in (None, "")]
 if _missing:
     raise SystemExit(
@@ -77,17 +88,25 @@ for _k in ("panfreebayes_bin", "freebayes_bin"):
 # align_region.sh's own `set -o pipefail` and the comment explaining why.
 shell.prefix("set -euo pipefail; ")
 
+# "joint" is reserved for the merged multi-sample BAM/VCF
+# (rules/call_variants_joint.smk), so it can't also be a strain name.
+if "joint" in config["strains"]:
+    raise SystemExit("strains: 'joint' is reserved (used for joint-calling outputs); rename that strain")
+
 wildcard_constraints:
-    strain=r"[^/]+",
+    strain=r"(?!joint$)[^/]+",
     bubble=r"[^/]+",
     path_id=r"[^/]+",
+    hap_id=r"[^/]+",
 
 include: "rules/common.smk"
 include: "rules/discover_bubbles.smk"
 include: "rules/extract_region.smk"
 include: "rules/extract_path.smk"
+include: "rules/extract_haplotype.smk"
 include: "rules/align_region.smk"
 include: "rules/call_variants.smk"
+include: "rules/call_variants_joint.smk"
 include: "rules/call_variants_freebayes.smk"
 
 
@@ -109,4 +128,22 @@ rule path_mode:
             f"{RESULTS}/calls/{{strain}}/{{path_id}}.vcf",
             strain=list(config["strains"].keys()),
             path_id=all_path_ids(wc),
+        ),
+
+
+# Third target: one reference per configured haplotype (config["haplotypes"],
+# all of that haplotype's contigs in one FASTA -- see extract_haplotype.smk).
+# With `joint: true` every strain is called together into one multi-sample
+# VCF per haplotype (calls/joint/<hap_id>.vcf, see call_variants_joint.smk);
+# otherwise one VCF per strain per haplotype, as in the other two modes.
+rule haplotype_mode:
+    input:
+        lambda wc: (
+            expand(f"{RESULTS}/calls/joint/{{hap_id}}.vcf", hap_id=all_hap_ids(wc))
+            if config.get("joint", False)
+            else expand(
+                f"{RESULTS}/calls/{{strain}}/{{hap_id}}.vcf",
+                strain=list(config["strains"].keys()),
+                hap_id=all_hap_ids(wc),
+            )
         ),
