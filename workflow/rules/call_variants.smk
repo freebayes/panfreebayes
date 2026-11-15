@@ -20,6 +20,26 @@
 # avoid a second layer of shell-quoting/splitting ambiguity when Snakemake's
 # shell: formats it into a command line.
 #
+# The VCF is written to <vcf>.tmp and only moved into place when
+# panfreebayes exits 0, so a crashed/killed call never leaves a partial
+# VCF that looks like a finished output. A non-zero exit fails the rule with
+# panfreebayes's own exit status. PFB_CALL_SHELL is shared with
+# call_variants_joint.smk.
+#
+PFB_CALL_SHELL = r"""
+        tmp={output.vcf}.tmp
+        rc=0
+        {params.pfb} call --ref {input.ref} --bam {input.bam} -- {params.flags} \
+            > "$tmp" 2> {log} || rc=$?
+        if [ "$rc" -ne 0 ]; then
+          rm -f "$tmp"
+          echo "panfreebayes call failed with exit status $rc (see {log})" >&2
+          exit "$rc"
+        fi
+        mv "$tmp" {output.vcf}
+        """
+
+
 rule call_variants:
     input:
         ref=f"{RESULTS}/regions/{{bubble}}.fasta",
@@ -33,7 +53,4 @@ rule call_variants:
     log:
         f"{RESULTS}/logs/call_variants/{{strain}}/{{bubble}}.log",
     shell:
-        r"""
-        {params.pfb} call --ref {input.ref} --bam {input.bam} -- {params.flags} \
-            > {output.vcf} 2> {log}
-        """
+        PFB_CALL_SHELL
