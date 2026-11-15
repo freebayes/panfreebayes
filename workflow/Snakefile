@@ -54,6 +54,7 @@
 #   pfb haplotype --cores N --configfile config/config.hg008.yaml
 #
 import os
+import re
 
 # Repo root, so repo-relative paths (default config, build/ binaries) resolve
 # the same no matter which directory snakemake/pfb is run from.
@@ -102,8 +103,14 @@ shell.prefix("set -euo pipefail; ")
 if "joint" in config["strains"]:
     raise SystemExit("strains: 'joint' is reserved (used for joint-calling outputs); rename that strain")
 
+# {strain} matches ONLY the configured strain names, so "joint" can never
+# be read as a strain and align_region/call_variants can't also claim
+# merge_bams'/call_variants_joint's alignments|calls/joint/... outputs
+# (that clash was an AmbiguousRuleException). The earlier lookahead
+# r"(?!joint$)[^/]+" didn't work: inside the full output pattern `$` means
+# end of the whole path, not end of the wildcard, so "joint/..." got through.
 wildcard_constraints:
-    strain=r"(?!joint$)[^/]+",
+    strain="|".join(re.escape(s) for s in config["strains"]),
     bubble=r"[^/]+",
     path_id=r"[^/]+",
     hap_id=r"[^/]+",
