@@ -5,6 +5,7 @@
 #   pfb bubble --cores 8          ->  snakemake bubble_mode ...
 #   pfb path -n                   ->  snakemake path_mode ... (dry run)
 #   pfb bubble path --cores 8     ->  both targets in one run
+#   pfb haplotype --cores 8       ->  snakemake haplotype_mode ...
 #
 # Fills in --snakefile (always) and --configfile (unless one is given) from
 # this checkout, so it can be run from any directory; results_dir in the
@@ -25,11 +26,14 @@ usage: pfb <mode> [<mode> ...] [snakemake args...]
 modes:
   bubble   bubble discovery -> region extraction -> align -> call (bubble_mode)
   path     whole-path reference from config whole_paths -> align -> call (path_mode)
+  haplotype  all paths of each config haplotypes entry as one reference -> align -> call,
+             jointly if joint: true (haplotype_mode)
 
 examples:
   pfb bubble -n --cores 1
   pfb path --cores 8
   pfb bubble path --cores 8 --configfile my.yaml
+  pfb haplotype --cores 8 --configfile config/config.hg008.yaml
 EOF
 }
 
@@ -48,6 +52,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         bubble) targets+=(bubble_mode); shift ;;
         path)   targets+=(path_mode);   shift ;;
+        haplotype) targets+=(haplotype_mode); shift ;;
         -h|--help) usage; exit 0 ;;
         *) break ;;
     esac
